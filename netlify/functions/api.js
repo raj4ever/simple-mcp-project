@@ -8,16 +8,28 @@ let client;
 
 async function connectDatabase() {
   if (!client) {
-    const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_ZsW7jgc9iShH@ep-calm-shadow-ad3t0jof-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
-    
-    client = new Client({
-      connectionString: connectionString
-    });
+    try {
+      console.log('Creating new database connection...');
+      const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_ZsW7jgc9iShH@ep-calm-shadow-ad3t0jof-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+      
+      console.log('Connection string:', connectionString.substring(0, 50) + '...');
+      
+      client = new Client({
+        connectionString: connectionString
+      });
 
-    await client.connect();
-    
-    // Create tables if they don't exist
-    await createTables(client);
+      console.log('Attempting to connect to database...');
+      await client.connect();
+      console.log('Database connection successful');
+      
+      // Create tables if they don't exist
+      console.log('Creating/verifying tables...');
+      await createTables(client);
+      console.log('Tables created/verified successfully');
+    } catch (error) {
+      console.error('Database connection failed:', error);
+      throw error;
+    }
   }
   return client;
 }
@@ -79,6 +91,8 @@ async function createTables(db) {
 }
 
 export const handler: Handler = async (event, context) => {
+  console.log('Function called with:', { path: event.path, method: event.httpMethod });
+  
   // Enable CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -96,9 +110,13 @@ export const handler: Handler = async (event, context) => {
   }
 
   try {
+    console.log('Attempting database connection...');
     const db = await connectDatabase();
+    console.log('Database connected successfully');
+    
     const path = event.path.replace('/api/', '');
     const method = event.httpMethod;
+    console.log('Processing request:', { path, method });
 
     // Parse request body
     let body = {};
@@ -106,12 +124,26 @@ export const handler: Handler = async (event, context) => {
       try {
         body = JSON.parse(event.body);
       } catch (e) {
-        // Ignore parsing errors for non-JSON requests
+        console.log('Body parsing failed:', e.message);
       }
     }
 
     // Route handling
     switch (path) {
+      case 'test':
+        if (method === 'GET') {
+          return {
+            statusCode: 200,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              message: 'Function is working',
+              timestamp: new Date().toISOString(),
+              environment: process.env.NODE_ENV || 'production'
+            }),
+          };
+        }
+        break;
+
       case 'stats':
         if (method === 'GET') {
           const userCount = await db.query('SELECT COUNT(*) as count FROM users');
@@ -215,13 +247,16 @@ export const handler: Handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Function error:', error);
+    console.error('Error stack:', error.stack);
+    
     return {
       statusCode: 500,
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         error: error.message,
-        details: 'Database connection or query failed'
+        details: 'Function execution failed',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       }),
     };
   }
