@@ -907,6 +907,61 @@ node /Volumes/Code/mcp/mcp-server.js</code></pre>
             }
         }
 
+        // Add sample user for testing
+        async function addSampleUser() {
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'Test User',
+                        email: 'test@example.com',
+                        age: 25,
+                        phone: '123-456-7890',
+                        address: 'Test Address'
+                    })
+                });
+                
+                if (response.ok) {
+                    showMessage('Sample user added successfully!', 'success');
+                    loadUsers();
+                } else {
+                    throw new Error('Failed to add sample user');
+                }
+            } catch (error) {
+                showMessage('Error adding sample user: ' + error.message, 'error');
+            }
+        }
+
+        // Add sample product for testing
+        async function addSampleProduct() {
+            try {
+                const response = await fetch('/api/products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'Test Product',
+                        description: 'A test product',
+                        price: 99.99,
+                        stock_quantity: 10
+                    })
+                });
+                
+                if (response.ok) {
+                    showMessage('Sample product added successfully!', 'success');
+                    loadProducts();
+                } else {
+                    throw new Error('Failed to add sample product');
+                }
+            } catch (error) {
+                showMessage('Error adding sample product: ' + error.message, 'error');
+            }
+        }
+
         // Load statistics
         async function loadStats() {
             try {
@@ -925,7 +980,18 @@ node /Volumes/Code/mcp/mcp-server.js</code></pre>
         async function loadUsers() {
             try {
                 const response = await fetch('/api/users');
+                console.log('Users API response:', response);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const users = await response.json();
+                console.log('Users data:', users);
+                console.log('Is users array?', Array.isArray(users));
+                
+                // Ensure users is an array
+                const usersArray = Array.isArray(users) ? users : [];
                 
                 let tableHTML = `
                     <table class="data-table">
@@ -941,22 +1007,40 @@ node /Volumes/Code/mcp/mcp-server.js</code></pre>
                         <tbody>
                 `;
                 
-                users.forEach(user => {
+                if (usersArray.length === 0) {
                     tableHTML += `
                         <tr>
-                            <td>${user.id}</td>
-                            <td>${user.name}</td>
-                            <td>${user.email}</td>
-                            <td>${user.age || '-'}</td>
-                            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                            <td colspan="5" style="text-align: center; padding: 20px;">
+                                No users found. <button onclick="addSampleUser()" class="btn-small">Add Sample User</button>
+                            </td>
                         </tr>
                     `;
-                });
+                } else {
+                    usersArray.forEach(user => {
+                        tableHTML += `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td>${user.age || '-'}</td>
+                                <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                            </tr>
+                        `;
+                    });
+                }
                 
                 tableHTML += '</tbody></table>';
                 document.getElementById('usersTable').innerHTML = tableHTML;
             } catch (error) {
-                document.getElementById('usersTable').innerHTML = '<div class="error">Error loading users: ' + error.message + '</div>';
+                console.error('Error loading users:', error);
+                document.getElementById('usersTable').innerHTML = `
+                    <div class="error">
+                        <h4>Error loading users:</h4>
+                        <p>${error.message}</p>
+                        <button onclick="loadUsers()" class="btn-small">Retry</button>
+                        <button onclick="addSampleUser()" class="btn-small">Add Sample User</button>
+                    </div>
+                `;
             }
         }
 
@@ -964,7 +1048,18 @@ node /Volumes/Code/mcp/mcp-server.js</code></pre>
         async function loadProducts() {
             try {
                 const response = await fetch('/api/products');
+                console.log('Products API response:', response);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const products = await response.json();
+                console.log('Products data:', products);
+                console.log('Is products array?', Array.isArray(products));
+                
+                // Ensure products is an array
+                const productsArray = Array.isArray(products) ? products : [];
                 
                 let tableHTML = `
                     <table class="data-table">
@@ -981,23 +1076,41 @@ node /Volumes/Code/mcp/mcp-server.js</code></pre>
                         <tbody>
                 `;
                 
-                products.forEach(product => {
+                if (productsArray.length === 0) {
                     tableHTML += `
                         <tr>
-                            <td>${product.id}</td>
-                            <td>${product.name}</td>
-                            <td>${product.description || '-'}</td>
-                            <td>$${product.price}</td>
-                            <td>${product.stock_quantity}</td>
-                            <td>${new Date(product.created_at).toLocaleDateString()}</td>
+                            <td colspan="6" style="text-align: center; padding: 20px;">
+                                No products found. <button onclick="addSampleProduct()" class="btn-small">Add Sample Product</button>
+                            </td>
                         </tr>
                     `;
-                });
+                } else {
+                    productsArray.forEach(product => {
+                        tableHTML += `
+                            <tr>
+                                <td>${product.id}</td>
+                                <td>${product.name}</td>
+                                <td>${product.description || '-'}</td>
+                                <td>$${product.price}</td>
+                                <td>${product.stock_quantity}</td>
+                                <td>${new Date(product.created_at).toLocaleDateString()}</td>
+                            </tr>
+                        `;
+                    });
+                }
                 
                 tableHTML += '</tbody></table>';
                 document.getElementById('productsTable').innerHTML = tableHTML;
             } catch (error) {
-                document.getElementById('productsTable').innerHTML = '<div class="error">Error loading products: ' + error.message + '</div>';
+                console.error('Error loading products:', error);
+                document.getElementById('productsTable').innerHTML = `
+                    <div class="error">
+                        <h4>Error loading products:</h4>
+                        <p>${error.message}</p>
+                        <button onclick="loadProducts()" class="btn-small">Retry</button>
+                        <button onclick="addSampleProduct()" class="btn-small">Add Sample Product</button>
+                    </div>
+                `;
             }
         }
 

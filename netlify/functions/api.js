@@ -133,6 +133,7 @@ export const handler: Handler = async (event, context) => {
       case 'users':
         if (method === 'GET') {
           const result = await db.query('SELECT * FROM users ORDER BY id');
+          console.log('Users query result:', result.rows);
           return {
             statusCode: 200,
             headers: { ...headers, 'Content-Type': 'application/json' },
@@ -155,6 +156,7 @@ export const handler: Handler = async (event, context) => {
       case 'products':
         if (method === 'GET') {
           const result = await db.query('SELECT * FROM products ORDER BY id');
+          console.log('Products query result:', result.rows);
           return {
             statusCode: 200,
             headers: { ...headers, 'Content-Type': 'application/json' },
