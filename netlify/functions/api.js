@@ -15,8 +15,67 @@ async function connectDatabase() {
     });
 
     await client.connect();
+    
+    // Create tables if they don't exist
+    await createTables(client);
   }
   return client;
+}
+
+async function createTables(db) {
+  try {
+    // Create users table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        age INTEGER,
+        phone VARCHAR(20),
+        address TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create products table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10, 2) NOT NULL,
+        stock_quantity INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Insert sample data if tables are empty
+    const userCountResult = await db.query('SELECT COUNT(*) FROM users');
+    if (parseInt(userCountResult.rows[0].count) === 0) {
+      await db.query(`
+        INSERT INTO users (name, email, age, phone, address) VALUES 
+        ('John Doe', 'john@example.com', 30, '123-456-7890', '123 Main St'),
+        ('Jane Smith', 'jane@example.com', 25, '098-765-4321', '456 Oak Ave'),
+        ('Bob Johnson', 'bob@example.com', 35, '111-222-3333', '789 Pine Ln'),
+        ('Alice Brown', 'alice@example.com', 28, '444-555-6666', '101 Elm Rd')
+      `);
+    }
+
+    const productCountResult = await db.query('SELECT COUNT(*) FROM products');
+    if (parseInt(productCountResult.rows[0].count) === 0) {
+      await db.query(`
+        INSERT INTO products (name, description, price, stock_quantity) VALUES 
+        ('Laptop', 'High-performance laptop', 1200.00, 10),
+        ('Mouse', 'Wireless mouse', 25.50, 50),
+        ('Keyboard', 'Mechanical keyboard', 75.00, 25),
+        ('Monitor', '4K UHD Monitor', 350.00, 15)
+      `);
+    }
+  } catch (error) {
+    console.error('Error creating tables:', error);
+  }
 }
 
 export const handler: Handler = async (event, context) => {
@@ -73,7 +132,7 @@ export const handler: Handler = async (event, context) => {
 
       case 'users':
         if (method === 'GET') {
-          const result = await db.query('SELECT * FROM users');
+          const result = await db.query('SELECT * FROM users ORDER BY id');
           return {
             statusCode: 200,
             headers: { ...headers, 'Content-Type': 'application/json' },
@@ -95,7 +154,7 @@ export const handler: Handler = async (event, context) => {
 
       case 'products':
         if (method === 'GET') {
-          const result = await db.query('SELECT * FROM products');
+          const result = await db.query('SELECT * FROM products ORDER BY id');
           return {
             statusCode: 200,
             headers: { ...headers, 'Content-Type': 'application/json' },
@@ -118,7 +177,8 @@ export const handler: Handler = async (event, context) => {
       case 'get-api-key':
         if (method === 'GET') {
           // For Netlify, we'll generate a new API key each time
-          const apiKey = require('crypto').randomBytes(32).toString('hex');
+          const crypto = await import('crypto');
+          const apiKey = crypto.randomBytes(32).toString('hex');
           return {
             statusCode: 200,
             headers: { ...headers, 'Content-Type': 'application/json' },
@@ -157,7 +217,10 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({ 
+        error: error.message,
+        details: 'Database connection or query failed'
+      }),
     };
   }
 };
