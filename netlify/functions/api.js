@@ -1,7 +1,6 @@
-import { Handler } from '@netlify/functions';
-import pg from 'pg';
-
-const { Client } = pg;
+const { Handler } = require('@netlify/functions');
+const { Client } = require('pg');
+const crypto = require('crypto');
 
 // Database connection
 let client;
@@ -90,7 +89,7 @@ async function createTables(db) {
   }
 }
 
-export const handler: Handler = async (event, context) => {
+const handler = async (event, context) => {
   console.log('Function called with:', { path: event.path, method: event.httpMethod });
   
   // Enable CORS
@@ -211,7 +210,6 @@ export const handler: Handler = async (event, context) => {
       case 'get-api-key':
         if (method === 'GET') {
           // For Netlify, we'll generate a new API key each time
-          const crypto = await import('crypto');
           const apiKey = crypto.randomBytes(32).toString('hex');
           return {
             statusCode: 200,
@@ -261,3 +259,5 @@ export const handler: Handler = async (event, context) => {
     };
   }
 };
+
+module.exports = { handler };

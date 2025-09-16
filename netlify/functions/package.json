@@ -1,0 +1,13 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for MCP Server",
+  "type": "commonjs",
+  "dependencies": {
+    "@netlify/functions": "^2.8.2",
+    "pg": "^8.16.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
