@@ -1,0 +1,10 @@
+# Simple MCP Server Environment Variables
+
+# Database Configuration
+DB_PATH=./database.sqlite
+
+# MCP Authentication (Optional)
+MCP_AUTH_TOKEN=your_secret_token_here
+
+# Server Configuration
+NODE_ENV=development

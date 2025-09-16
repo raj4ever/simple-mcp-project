@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Database Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            background: #f8f9fa;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .data-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        /* API Key Styles */
+        .api-key-section {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .api-key-result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .api-key-display {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .api-key-display input {
+            flex: 1;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-small:hover {
+            background-color: #0056b3;
+        }
+
+        .api-key-instructions {
+            margin-top: 20px;
+        }
+
+        .api-key-instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .config-example {
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .config-example pre {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .config-example button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .current-key-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+        }
+
+        .status-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .status-indicator {
+            font-size: 20px;
+        }
+
+        .status-indicator.online {
+            color: #28a745;
+        }
+
+        .status-indicator.offline {
+            color: #dc3545;
+        }
+
+        .status-indicator.checking {
+            color: #ffc107;
+        }
+
+        /* Connection Guide Styles */
+        .connection-guide {
+            margin-top: 30px;
+            padding: 25px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .guide-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+
+        .guide-section h5 {
+            color: #007bff;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .guide-section h6 {
+            color: #495057;
+            margin: 15px 0 10px 0;
+            font-size: 1rem;
+        }
+
+        .code-block {
+            position: relative;
+            margin: 15px 0;
+        }
+
+        .code-block pre {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .code-block button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .config-block {
+            margin: 15px 0;
+        }
+
+        .file-path {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .file-path code {
+            flex: 1;
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+
+        .url-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .url-block code {
+            flex: 1;
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+
+        .troubleshoot-section {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .troubleshoot-section h6 {
+            color: #856404;
+            margin-top: 0;
+        }
+
+        .guide-section ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .guide-section li {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .guide-section code {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .guide-section strong {
+            color: #495057;
+        }
+
+        /* API Key Management Styles */
+        .api-key-management {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .current-key-display {
+            margin-bottom: 15px;
+        }
+
+        .current-key-display label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .key-display {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .key-display input {
+            flex: 1;
+            padding: 8px 12px;
+            font-family: monospace;
+            font-size: 13px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+
+        .key-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .key-actions button {
+            flex: 1;
+        }
+
+        /* Simple Config Styles */
+        .simple-config {
+            background-color: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .simple-config h6 {
+            color: #155724;
+            margin-top: 0;
+        }
+
+        .simple-config ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        .simple-config li {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .ready-config {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .ready-config h6 {
+            color: #495057;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MCP Database Manager</h1>
+            <p>Manage your SQLite database through MCP Protocol</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="userCount">-</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="productCount">-</div>
+                <div class="stat-label">Total Products</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalValue">-</div>
+                <div class="stat-label">Inventory Value</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('users')">Users</button>
+                <button class="tab" onclick="showTab('products')">Products</button>
+                <button class="tab" onclick="showTab('add-user')">Add User</button>
+                <button class="tab" onclick="showTab('add-product')">Add Product</button>
+                <button class="tab" onclick="showTab('update-user')">Update User</button>
+                <button class="tab" onclick="showTab('update-product')">Update Product</button>
+                <button class="tab" onclick="showTab('api-key')">API Key</button>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users" class="tab-content active">
+                <div class="search-box">
+                    <input type="text" id="userSearch" placeholder="Search users by name or email..." onkeyup="searchUsers()">
+                </div>
+                <div id="usersTable"></div>
+            </div>
+
+            <!-- Products Tab -->
+            <div id="products" class="tab-content">
+                <div id="productsTable"></div>
+            </div>
+
+            <!-- Add User Tab -->
+            <div id="add-user" class="tab-content">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label for="userName">Name *</label>
+                        <input type="text" id="userName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail">Email *</label>
+                        <input type="email" id="userEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userAge">Age</label>
+                        <input type="number" id="userAge">
+                    </div>
+                    <button type="submit" class="btn">Add User</button>
+                </form>
+            </div>
+
+            <!-- Add Product Tab -->
+            <div id="add-product" class="tab-content">
+                <form id="productForm">
+                    <div class="form-group">
+                        <label for="productName">Product Name *</label>
+                        <input type="text" id="productName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productDescription">Description</label>
+                        <textarea id="productDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="productPrice">Price *</label>
+                        <input type="number" id="productPrice" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productStock">Stock Quantity</label>
+                        <input type="number" id="productStock" value="0">
+                    </div>
+                    <button type="submit" class="btn">Add Product</button>
+                </form>
+            </div>
+
+            <!-- Update User Tab -->
+            <div id="update-user" class="tab-content">
+                <form id="updateUserForm">
+                    <div class="form-group">
+                        <label for="updateUserId">User ID *</label>
+                        <input type="number" id="updateUserId" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="updateUserName">New Name</label>
+                        <input type="text" id="updateUserName">
+                    </div>
+                    <div class="form-group">
+                        <label for="updateUserEmail">New Email</label>
+                        <input type="email" id="updateUserEmail">
+                    </div>
+                    <div class="form-group">
+                        <label for="updateUserAge">New Age</label>
+                        <input type="number" id="updateUserAge">
+                    </div>
+                    <button type="submit" class="btn">Update User</button>
+                </form>
+                <div style="margin-top: 20px;">
+                    <button onclick="deleteUser()" class="btn" style="background: #dc3545;">Delete User</button>
+                </div>
+            </div>
+
+            <!-- Update Product Tab -->
+            <div id="update-product" class="tab-content">
+                <form id="updateProductForm">
+                    <div class="form-group">
+                        <label for="updateProductId">Product ID *</label>
+                        <input type="number" id="updateProductId" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="updateProductName">New Product Name</label>
+                        <input type="text" id="updateProductName">
+                    </div>
+                    <div class="form-group">
+                        <label for="updateProductDescription">New Description</label>
+                        <textarea id="updateProductDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="updateProductPrice">New Price</label>
+                        <input type="number" id="updateProductPrice" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="updateProductStock">New Stock Quantity</label>
+                        <input type="number" id="updateProductStock">
+                    </div>
+                    <button type="submit" class="btn">Update Product</button>
+                </form>
+                <div style="margin-top: 20px;">
+                    <button onclick="deleteProduct()" class="btn" style="background: #dc3545;">Delete Product</button>
+                </div>
+            </div>
+
+            <!-- API Key Tab -->
+            <div id="api-key" class="tab-content">
+                <div class="api-key-section">
+                    <h3>🔑 MCP API Key Generator</h3>
+                    <p>Generate a secure API key for Cloud Desktop connection</p>
+                    
+                    <div class="form-group">
+                        <button onclick="generateAPIKey()" class="btn" style="background: #28a745;">
+                            Generate New API Key
+                        </button>
+                    </div>
+
+                    <div id="apiKeyResult" class="api-key-result" style="display: none;">
+                        <h4>✅ Generated API Key:</h4>
+                        <div class="api-key-display">
+                            <input type="text" id="generatedApiKey" readonly>
+                            <button onclick="copyAPIKey()" class="btn-small">Copy</button>
+                        </div>
+                        
+                        <div class="api-key-instructions">
+                            <h4>📋 Cloud Desktop Setup Instructions:</h4>
+                            <ol>
+                                <li>Copy the API key above</li>
+                                <li>Open Cloud Desktop MCP settings</li>
+                                <li>Add this configuration:</li>
+                            </ol>
+                            
+                            <div class="config-example">
+                                <pre><code>{
+  "mcpServers": {
+    "postgresql-mcp-server": {
+      "command": "node",
+      "args": ["/Volumes/Code/mcp/mcp-server.js"],
+      "cwd": "/Volumes/Code/mcp",
+      "env": {
+        "DATABASE_URL": "postgresql://neondb_owner:npg_ZsW7jgc9iShH@ep-calm-shadow-ad3t0jof-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+        "MCP_API_KEY": "<span id="configApiKey">your_api_key_here</span>"
+      }
+    }
+  }
+}</code></pre>
+                                <button onclick="copyConfig()" class="btn-small">Copy Config</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="current-key-section">
+                        <h4>🔑 Current API Key Management:</h4>
+                        <div class="api-key-management">
+                            <div class="current-key-display">
+                                <label>Current API Key:</label>
+                                <div class="key-display">
+                                    <input type="text" id="currentApiKey" readonly>
+                                    <button onclick="copyCurrentKey()" class="btn-small">Copy</button>
+                                    <button onclick="regenerateKey()" class="btn-small" style="background: #dc3545;">Regenerate</button>
+                                </div>
+                            </div>
+                            
+                            <div class="key-actions">
+                                <button onclick="saveApiKey()" class="btn-small" style="background: #28a745;">Save to Server</button>
+                                <button onclick="loadApiKey()" class="btn-small">Load from Server</button>
+                            </div>
+                        </div>
+                        
+                        <h4>🔍 Current Server Status:</h4>
+                        <div id="serverStatus" class="status-display">
+                            <span id="statusIndicator" class="status-indicator">●</span>
+                            <span id="statusText">Checking server status...</span>
+                        </div>
+                        <button onclick="checkServerStatus()" class="btn-small">Refresh Status</button>
+                    </div>
+
+                    <div class="connection-guide">
+                        <h4>📖 Complete MCP Connection Guide</h4>
+                        
+                        <div class="guide-section">
+                            <h5>🚀 Step 1: Start Your MCP Server</h5>
+                            <div class="code-block">
+                                <pre><code># Terminal mein project directory mein jayein
+cd /Volumes/Code/mcp
+
+# MCP Server start karein
+npm start
+
+# Ya web server start karein
+npm run web</code></pre>
+                                <button onclick="copyCode('start-server')" class="btn-small">Copy Commands</button>
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <h5>🔧 Step 2: Generate API Key</h5>
+                            <p>Upar "Generate New API Key" button click karein aur key copy karein.</p>
+                        </div>
+
+                        <div class="guide-section">
+                            <h5>⚙️ Step 3: Cloud Desktop Configuration</h5>
+                            <p><strong>Bas ye simple steps follow karein:</strong></p>
+                            
+                            <div class="simple-config">
+                                <h6>🎯 Simple Setup:</h6>
+                                <ol>
+                                    <li>Upar "Generate New API Key" button click karein</li>
+                                    <li>"Save to Server" button click karein</li>
+                                    <li>Neeche "Copy Ready Config" button click karein</li>
+                                    <li>Cloud Desktop mein MCP settings open karein</li>
+                                    <li>Copied config paste karein</li>
+                                    <li>Cloud Desktop restart karein</li>
+                                </ol>
+                                
+                                <div class="ready-config">
+                                    <h6>📋 Ready-to-Use Configuration:</h6>
+                                    <div class="config-example">
+                                        <pre><code id="readyConfig">{
+  "mcpServers": {
+    "postgresql-mcp-server": {
+      "command": "node",
+      "args": ["/Volumes/Code/mcp/mcp-server.js"],
+      "cwd": "/Volumes/Code/mcp",
+      "env": {
+        "MCP_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}</code></pre>
+                                        <button onclick="copyReadyConfig()" class="btn-small">Copy Ready Config</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <h5>🔄 Step 4: Restart Cloud Desktop</h5>
+                            <p>Configuration save karne ke baad Cloud Desktop restart karein.</p>
+                        </div>
+
+                        <div class="guide-section">
+                            <h5>✅ Step 5: Test Connection</h5>
+                            <p>Cloud Desktop mein MCP tools check karein:</p>
+                            <ul>
+                                <li><code>list_users</code> - Users list dekhne ke liye</li>
+                                <li><code>list_products</code> - Products list dekhne ke liye</li>
+                                <li><code>add_user</code> - New user add karne ke liye</li>
+                                <li><code>add_product</code> - New product add karne ke liye</li>
+                                <li><code>update_user</code> - User update karne ke liye</li>
+                                <li><code>update_product</code> - Product update karne ke liye</li>
+                                <li><code>delete_user</code> - User delete karne ke liye</li>
+                                <li><code>delete_product</code> - Product delete karne ke liye</li>
+                            </ul>
+                        </div>
+
+                        <div class="guide-section">
+                            <h5>🌐 Step 6: Web Interface Access</h5>
+                            <p>Web interface ko access karne ke liye:</p>
+                            <div class="url-block">
+                                <code>http://localhost:8000</code>
+                                <button onclick="copyCode('web-url')" class="btn-small">Copy URL</button>
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <h5>🔍 Troubleshooting</h5>
+                            <div class="troubleshoot-section">
+                                <h6>❌ Common Issues:</h6>
+                                <ul>
+                                    <li><strong>Server not found:</strong> Check file paths in config</li>
+                                    <li><strong>Permission denied:</strong> Check file permissions</li>
+                                    <li><strong>API key invalid:</strong> Regenerate API key</li>
+                                    <li><strong>Database locked:</strong> Stop other processes using database</li>
+                                </ul>
+                                
+                                <h6>🔧 Debug Commands:</h6>
+                                <div class="code-block">
+                                    <pre><code># Check if Node.js is installed
+node --version
+
+# Check if MCP server is running
+ps aux | grep mcp-server
+
+# Check database file
+ls -la /Volumes/Code/mcp/database.sqlite
+
+# Test MCP server manually
+node /Volumes/Code/mcp/mcp-server.js</code></pre>
+                                    <button onclick="copyCode('debug-commands')" class="btn-small">Copy Debug Commands</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <h5>📞 Support</h5>
+                            <p>Issues aayein to:</p>
+                            <ul>
+                                <li>Server logs check karein</li>
+                                <li>API key regenerate karein</li>
+                                <li>File permissions verify karein</li>
+                                <li>Cloud Desktop restart karein</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'users';
+
+        // Show tab function
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Load data for the tab
+            if (tabName === 'users') {
+                loadUsers();
+            } else if (tabName === 'products') {
+                loadProducts();
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                document.getElementById('userCount').textContent = stats.total_users;
+                document.getElementById('productCount').textContent = stats.total_products;
+                document.getElementById('totalValue').textContent = '$' + stats.total_inventory_value.toFixed(2);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                
+                let tableHTML = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Age</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                users.forEach(user => {
+                    tableHTML += `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${user.age || '-'}</td>
+                            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += '</tbody></table>';
+                document.getElementById('usersTable').innerHTML = tableHTML;
+            } catch (error) {
+                document.getElementById('usersTable').innerHTML = '<div class="error">Error loading users: ' + error.message + '</div>';
+            }
+        }
+
+        // Load products
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const products = await response.json();
+                
+                let tableHTML = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                products.forEach(product => {
+                    tableHTML += `
+                        <tr>
+                            <td>${product.id}</td>
+                            <td>${product.name}</td>
+                            <td>${product.description || '-'}</td>
+                            <td>$${product.price}</td>
+                            <td>${product.stock_quantity}</td>
+                            <td>${new Date(product.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += '</tbody></table>';
+                document.getElementById('productsTable').innerHTML = tableHTML;
+            } catch (error) {
+                document.getElementById('productsTable').innerHTML = '<div class="error">Error loading products: ' + error.message + '</div>';
+            }
+        }
+
+        // Search users
+        async function searchUsers() {
+            const query = document.getElementById('userSearch').value;
+            if (query.length < 2) {
+                loadUsers();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+                const users = await response.json();
+                
+                let tableHTML = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Age</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                users.forEach(user => {
+                    tableHTML += `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${user.age || '-'}</td>
+                            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += '</tbody></table>';
+                document.getElementById('usersTable').innerHTML = tableHTML;
+            } catch (error) {
+                document.getElementById('usersTable').innerHTML = '<div class="error">Error searching users: ' + error.message + '</div>';
+            }
+        }
+
+        // Add user form handler
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userData = {
+                name: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value,
+                age: document.getElementById('userAge').value || null
+            };
+            
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('userForm').reset();
+                    showMessage('User added successfully!', 'success');
+                    loadStats();
+                    showTab('users');
+                    loadUsers();
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error adding user: ' + error.message, 'error');
+            }
+        });
+
+        // Add product form handler
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const productData = {
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productDescription').value,
+                price: parseFloat(document.getElementById('productPrice').value),
+                stock_quantity: parseInt(document.getElementById('productStock').value) || 0
+            };
+            
+            try {
+                const response = await fetch('/api/products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(productData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('productForm').reset();
+                    showMessage('Product added successfully!', 'success');
+                    loadStats();
+                    showTab('products');
+                    loadProducts();
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error adding product: ' + error.message, 'error');
+            }
+        });
+
+        // Show message function
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            
+            const content = document.querySelector('.content');
+            content.insertBefore(messageDiv, content.firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Update user form handler
+        document.getElementById('updateUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('updateUserId').value;
+            const updateData = {};
+            
+            const name = document.getElementById('updateUserName').value;
+            const email = document.getElementById('updateUserEmail').value;
+            const age = document.getElementById('updateUserAge').value;
+            
+            if (name) updateData.name = name;
+            if (email) updateData.email = email;
+            if (age) updateData.age = parseInt(age);
+            
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('updateUserForm').reset();
+                    showMessage('User updated successfully!', 'success');
+                    loadStats();
+                    showTab('users');
+                    loadUsers();
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error updating user: ' + error.message, 'error');
+            }
+        });
+
+        // Update product form handler
+        document.getElementById('updateProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const productId = document.getElementById('updateProductId').value;
+            const updateData = {};
+            
+            const name = document.getElementById('updateProductName').value;
+            const description = document.getElementById('updateProductDescription').value;
+            const price = document.getElementById('updateProductPrice').value;
+            const stock = document.getElementById('updateProductStock').value;
+            
+            if (name) updateData.name = name;
+            if (description) updateData.description = description;
+            if (price) updateData.price = parseFloat(price);
+            if (stock) updateData.stock_quantity = parseInt(stock);
+            
+            try {
+                const response = await fetch(`/api/products/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('updateProductForm').reset();
+                    showMessage('Product updated successfully!', 'success');
+                    loadStats();
+                    showTab('products');
+                    loadProducts();
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error updating product: ' + error.message, 'error');
+            }
+        });
+
+        // Delete user function
+        async function deleteUser() {
+            const userId = document.getElementById('updateUserId').value;
+            if (!userId) {
+                showMessage('Please enter User ID first', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete user with ID ${userId}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('updateUserForm').reset();
+                    showMessage('User deleted successfully!', 'success');
+                    loadStats();
+                    showTab('users');
+                    loadUsers();
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error deleting user: ' + error.message, 'error');
+            }
+        }
+
+        // Delete product function
+        async function deleteProduct() {
+            const productId = document.getElementById('updateProductId').value;
+            if (!productId) {
+                showMessage('Please enter Product ID first', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete product with ID ${productId}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/products/${productId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('updateProductForm').reset();
+                    showMessage('Product deleted successfully!', 'success');
+                    loadStats();
+                    showTab('products');
+                    loadProducts();
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error deleting product: ' + error.message, 'error');
+            }
+        }
+
+        // API Key Functions
+        function generateAPIKey() {
+            // Generate a random API key
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let apiKey = '';
+            for (let i = 0; i < 64; i++) {
+                apiKey += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            // Display the generated key
+            document.getElementById('generatedApiKey').value = apiKey;
+            document.getElementById('currentApiKey').value = apiKey;
+            document.getElementById('configApiKey').textContent = apiKey;
+            document.getElementById('apiKeyResult').style.display = 'block';
+            
+            showMessage('API Key generated successfully!', 'success');
+        }
+
+        function copyAPIKey() {
+            const apiKeyInput = document.getElementById('generatedApiKey');
+            apiKeyInput.select();
+            apiKeyInput.setSelectionRange(0, 99999); // For mobile devices
+            document.execCommand('copy');
+            showMessage('API Key copied to clipboard!', 'success');
+        }
+
+        function copyReadyConfig() {
+            const apiKey = document.getElementById('currentApiKey').value || 'your_api_key_here';
+            const configText = `{
+  "mcpServers": {
+    "postgresql-mcp-server": {
+      "command": "node",
+      "args": ["/Volumes/Code/mcp/mcp-server.js"],
+      "cwd": "/Volumes/Code/mcp",
+      "env": {
+        "MCP_API_KEY": "${apiKey}"
+      }
+    }
+  }
+}`;
+            
+            navigator.clipboard.writeText(configText).then(() => {
+                showMessage('Ready-to-use config copied! Paste in Cloud Desktop MCP settings.', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = configText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showMessage('Ready-to-use config copied! Paste in Cloud Desktop MCP settings.', 'success');
+            });
+        }
+
+        function copyConfig() {
+            const apiKey = document.getElementById('currentApiKey').value || 'your_api_key_here';
+            const configText = `{
+  "mcpServers": {
+    "postgresql-mcp-server": {
+      "command": "node",
+      "args": ["/Volumes/Code/mcp/mcp-server.js"],
+      "cwd": "/Volumes/Code/mcp",
+      "env": {
+        "DATABASE_URL": "postgresql://neondb_owner:npg_ZsW7jgc9iShH@ep-calm-shadow-ad3t0jof-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+        "MCP_API_KEY": "${apiKey}"
+      }
+    }
+  }
+}`;
+            
+            navigator.clipboard.writeText(configText).then(() => {
+                showMessage('MCP Config copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = configText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showMessage('MCP Config copied to clipboard!', 'success');
+            });
+        }
+
+        // API Key Management Functions
+        function copyCurrentKey() {
+            const currentKeyInput = document.getElementById('currentApiKey');
+            currentKeyInput.select();
+            currentKeyInput.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            showMessage('Current API Key copied to clipboard!', 'success');
+        }
+
+        function regenerateKey() {
+            if (confirm('Are you sure you want to regenerate the API key? This will invalidate the current key.')) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let apiKey = '';
+                for (let i = 0; i < 64; i++) {
+                    apiKey += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                
+                document.getElementById('currentApiKey').value = apiKey;
+                showMessage('New API Key generated!', 'success');
+            }
+        }
+
+        function saveApiKey() {
+            const apiKey = document.getElementById('currentApiKey').value;
+            if (!apiKey) {
+                showMessage('Please generate an API key first!', 'error');
+                return;
+            }
+
+            fetch('/api/save-api-key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ apiKey: apiKey })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('API Key saved to server successfully!', 'success');
+                } else {
+                    showMessage('Error saving API key: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Error saving API key: ' + error.message, 'error');
+            });
+        }
+
+        function loadApiKey() {
+            fetch('/api/get-api-key')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.apiKey) {
+                        document.getElementById('currentApiKey').value = data.apiKey;
+                        showMessage('API Key loaded from server!', 'success');
+                    } else {
+                        showMessage('No API key found on server', 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error loading API key: ' + error.message, 'error');
+                });
+        }
+
+        function checkServerStatus() {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            statusIndicator.className = 'status-indicator checking';
+            statusText.textContent = 'Checking server status...';
+            
+            fetch('/api/stats')
+                .then(response => {
+                    if (response.ok) {
+                        statusIndicator.className = 'status-indicator online';
+                        statusText.textContent = 'MCP Server is running and connected';
+                    } else {
+                        throw new Error('Server not responding');
+                    }
+                })
+                .catch(error => {
+                    statusIndicator.className = 'status-indicator offline';
+                    statusText.textContent = 'MCP Server is offline or not responding';
+                });
+        }
+
+        function copyCode(type) {
+            let text = '';
+            
+            switch(type) {
+                case 'start-server':
+                    text = `cd /Volumes/Code/mcp
+npm start
+npm run web`;
+                    break;
+                case 'config-path':
+                    text = '~/.config/cloud-desktop/mcp-config.json';
+                    break;
+                case 'web-url':
+                    text = 'http://localhost:8000';
+                    break;
+                case 'debug-commands':
+                    text = `node --version
+ps aux | grep mcp-server
+ls -la /Volumes/Code/mcp/database.sqlite
+node /Volumes/Code/mcp/mcp-server.js`;
+                    break;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showMessage('Code copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showMessage('Code copied to clipboard!', 'success');
+            });
+        }
+
+        function copyFullConfig() {
+            const apiKey = document.getElementById('currentApiKey').value || 'your_api_key_here';
+            const configText = `{
+  "mcpServers": {
+    "postgresql-mcp-server": {
+      "command": "node",
+      "args": ["/Volumes/Code/mcp/mcp-server.js"],
+      "cwd": "/Volumes/Code/mcp",
+      "env": {
+        "DATABASE_URL": "postgresql://neondb_owner:npg_ZsW7jgc9iShH@ep-calm-shadow-ad3t0jof-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+        "MCP_API_KEY": "${apiKey}"
+      }
+    }
+  }
+}`;
+            
+            navigator.clipboard.writeText(configText).then(() => {
+                showMessage('Full MCP Config copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = configText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showMessage('Full MCP Config copied to clipboard!', 'success');
+            });
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadUsers();
+            checkServerStatus();
+            loadApiKey(); // Load current API key on page load
+        });
+    </script>
+</body>
+</html>

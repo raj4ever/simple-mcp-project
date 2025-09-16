@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "postgresql-mcp-server": {
+      "command": "node",
+      "args": ["/Volumes/Code/mcp/mcp-server.js"],
+      "cwd": "/Volumes/Code/mcp",
+      "env": {
+        "MCP_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}

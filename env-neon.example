@@ -1,0 +1,8 @@
+# Neon PostgreSQL Database Connection
+DATABASE_URL=postgresql://neondb_owner:npg_ZsW7jgc9iShH@ep-calm-shadow-ad3t0jof-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+# MCP API Key (generate new one)
+MCP_API_KEY=
+
+# Environment
+NODE_ENV=production
