@@ -699,6 +699,20 @@
                             </ol>
                             
                             <div class="config-example">
+                                <h5>🌐 For Netlify Hosted Site (Recommended):</h5>
+                                <pre><code>{
+  "mcpServers": {
+    "netlify-postgresql": {
+      "command": "npx -y mcp-remote https://stunning-klepon-314d4d.netlify.app/api/mcp",
+      "env": {
+        "MCP_API_KEY": "<span id="configApiKey">your_api_key_here</span>"
+      },
+      "args": []
+    }
+  }
+}</code></pre>
+                                
+                                <h5>💻 For Local Development:</h5>
                                 <pre><code>{
   "mcpServers": {
     "postgresql-mcp-server": {
@@ -1451,20 +1465,18 @@ node /Volumes/Code/mcp/mcp-server.js</code></pre>
             const apiKey = document.getElementById('currentApiKey').value || 'your_api_key_here';
             const configText = `{
   "mcpServers": {
-    "postgresql-mcp-server": {
-      "command": "node",
-      "args": ["/Volumes/Code/mcp/mcp-server.js"],
-      "cwd": "/Volumes/Code/mcp",
+    "netlify-postgresql": {
+      "command": "npx -y mcp-remote https://stunning-klepon-314d4d.netlify.app/api/mcp",
       "env": {
-        "DATABASE_URL": "postgresql://neondb_owner:npg_ZsW7jgc9iShH@ep-calm-shadow-ad3t0jof-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
         "MCP_API_KEY": "${apiKey}"
-      }
+      },
+      "args": []
     }
   }
 }`;
             
             navigator.clipboard.writeText(configText).then(() => {
-                showMessage('MCP Config copied to clipboard!', 'success');
+                showMessage('Netlify MCP Config copied to clipboard!', 'success');
             }).catch(() => {
                 // Fallback for older browsers
                 const textArea = document.createElement('textarea');

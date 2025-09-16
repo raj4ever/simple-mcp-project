@@ -8,6 +8,8 @@
     "start": "node mcp-server.js",
     "dev": "node --watch mcp-server.js",
     "web": "node web-server.js",
+    "remote": "node remote-server.js",
+    "remote-dev": "node --watch remote-server.js",
     "build": "npm run build:static && npm run build:functions",
     "build:static": "mkdir -p dist && cp -r public/* dist/",
     "build:functions": "mkdir -p .netlify/functions && cp netlify/functions/api.js .netlify/functions/ && cp netlify/functions/package.json .netlify/functions/",

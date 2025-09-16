@@ -230,6 +230,224 @@ const handler = async (event, context) => {
         }
         break;
 
+      case 'mcp':
+        if (method === 'POST') {
+          // MCP Protocol endpoint for remote connections
+          const mcpRequest = body;
+          
+          // Validate API key
+          const apiKey = event.headers['x-api-key'] || event.headers['authorization']?.replace('Bearer ', '');
+          if (!apiKey || apiKey !== process.env.MCP_API_KEY) {
+            return {
+              statusCode: 401,
+              headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ error: 'Invalid API key' }),
+            };
+          }
+
+          // Handle MCP requests
+          try {
+            if (mcpRequest.method === 'tools/list') {
+              return {
+                statusCode: 200,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tools: [
+                    {
+                      name: 'list_users',
+                      description: 'Get all users from the database',
+                      inputSchema: { type: 'object', properties: {}, required: [] }
+                    },
+                    {
+                      name: 'list_products', 
+                      description: 'Get all products from the database',
+                      inputSchema: { type: 'object', properties: {}, required: [] }
+                    },
+                    {
+                      name: 'add_user',
+                      description: 'Add a new user to the database',
+                      inputSchema: {
+                        type: 'object',
+                        properties: {
+                          name: { type: 'string', description: "User's name" },
+                          email: { type: 'string', description: "User's email" },
+                          age: { type: 'integer', description: "User's age" },
+                          phone: { type: 'string', description: "User's phone number" },
+                          address: { type: 'string', description: "User's address" }
+                        },
+                        required: ['name', 'email']
+                      }
+                    },
+                    {
+                      name: 'add_product',
+                      description: 'Add a new product to the database',
+                      inputSchema: {
+                        type: 'object',
+                        properties: {
+                          name: { type: 'string', description: "Product's name" },
+                          description: { type: 'string', description: "Product's description" },
+                          price: { type: 'number', description: "Product's price" },
+                          stock_quantity: { type: 'integer', description: "Product's stock quantity" }
+                        },
+                        required: ['name', 'price']
+                      }
+                    },
+                    {
+                      name: 'update_user',
+                      description: 'Update an existing user in the database',
+                      inputSchema: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer', description: "User's ID" },
+                          name: { type: 'string', description: "New name for the user" },
+                          email: { type: 'string', description: "New email for the user" },
+                          age: { type: 'integer', description: "New age for the user" },
+                          phone: { type: 'string', description: "New phone number for the user" },
+                          address: { type: 'string', description: "New address for the user" }
+                        },
+                        required: ['id']
+                      }
+                    },
+                    {
+                      name: 'update_product',
+                      description: 'Update an existing product in the database',
+                      inputSchema: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer', description: "Product's ID" },
+                          name: { type: 'string', description: "New name for the product" },
+                          description: { type: 'string', description: "New description for the product" },
+                          price: { type: 'number', description: "New price for the product" },
+                          stock_quantity: { type: 'integer', description: "New stock quantity for the product" }
+                        },
+                        required: ['id']
+                      }
+                    },
+                    {
+                      name: 'delete_user',
+                      description: 'Delete a user from the database',
+                      inputSchema: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer', description: "User's ID to delete" }
+                        },
+                        required: ['id']
+                      }
+                    },
+                    {
+                      name: 'delete_product',
+                      description: 'Delete a product from the database',
+                      inputSchema: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer', description: "Product's ID to delete" }
+                        },
+                        required: ['id']
+                      }
+                    }
+                  ]
+                }),
+              };
+            } else if (mcpRequest.method === 'tools/call') {
+              const { name, arguments: args } = mcpRequest.params;
+              
+              let result;
+              switch (name) {
+                case 'list_users':
+                  const usersResult = await db.query('SELECT * FROM users ORDER BY id');
+                  result = { users: usersResult.rows };
+                  break;
+                case 'list_products':
+                  const productsResult = await db.query('SELECT * FROM products ORDER BY id');
+                  result = { products: productsResult.rows };
+                  break;
+                case 'add_user':
+                  const { name: userName, email, age, phone, address } = args;
+                  const addUserResult = await db.query(
+                    'INSERT INTO users (name, email, age, phone, address) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                    [userName, email, age, phone, address]
+                  );
+                  result = { user: addUserResult.rows[0] };
+                  break;
+                case 'add_product':
+                  const { name: productName, description, price, stock_quantity } = args;
+                  const addProductResult = await db.query(
+                    'INSERT INTO products (name, description, price, stock_quantity) VALUES ($1, $2, $3, $4) RETURNING *',
+                    [productName, description, price, stock_quantity]
+                  );
+                  result = { product: addProductResult.rows[0] };
+                  break;
+                case 'update_user':
+                  const { id: userId, name: newName, email: newEmail, age: newAge, phone: newPhone, address: newAddress } = args;
+                  const fields = [];
+                  const values = [];
+                  let paramIndex = 1;
+
+                  if (newName !== undefined) { fields.push(`name = $${paramIndex++}`); values.push(newName); }
+                  if (newEmail !== undefined) { fields.push(`email = $${paramIndex++}`); values.push(newEmail); }
+                  if (newAge !== undefined) { fields.push(`age = $${paramIndex++}`); values.push(newAge); }
+                  if (newPhone !== undefined) { fields.push(`phone = $${paramIndex++}`); values.push(newPhone); }
+                  if (newAddress !== undefined) { fields.push(`address = $${paramIndex++}`); values.push(newAddress); }
+
+                  if (fields.length === 0) {
+                    result = { message: 'No fields to update' };
+                  } else {
+                    values.push(userId);
+                    const query = `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING *`;
+                    const updateUserResult = await db.query(query, values);
+                    result = { user: updateUserResult.rows[0] };
+                  }
+                  break;
+                case 'update_product':
+                  const { id: productId, name: newProductName, description: newDescription, price: newPrice, stock_quantity: newStockQuantity } = args;
+                  const productFields = [];
+                  const productValues = [];
+                  let productParamIndex = 1;
+
+                  if (newProductName !== undefined) { productFields.push(`name = $${productParamIndex++}`); productValues.push(newProductName); }
+                  if (newDescription !== undefined) { productFields.push(`description = $${productParamIndex++}`); productValues.push(newDescription); }
+                  if (newPrice !== undefined) { productFields.push(`price = $${productParamIndex++}`); productValues.push(newPrice); }
+                  if (newStockQuantity !== undefined) { productFields.push(`stock_quantity = $${productParamIndex++}`); productValues.push(newStockQuantity); }
+
+                  if (productFields.length === 0) {
+                    result = { message: 'No fields to update' };
+                  } else {
+                    productValues.push(productId);
+                    const productQuery = `UPDATE products SET ${productFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${productParamIndex} RETURNING *`;
+                    const updateProductResult = await db.query(productQuery, productValues);
+                    result = { product: updateProductResult.rows[0] };
+                  }
+                  break;
+                case 'delete_user':
+                  const { id: deleteUserId } = args;
+                  const deleteUserResult = await db.query('DELETE FROM users WHERE id = $1 RETURNING *', [deleteUserId]);
+                  result = { user: deleteUserResult.rows[0] };
+                  break;
+                case 'delete_product':
+                  const { id: deleteProductId } = args;
+                  const deleteProductResult = await db.query('DELETE FROM products WHERE id = $1 RETURNING *', [deleteProductId]);
+                  result = { product: deleteProductResult.rows[0] };
+                  break;
+                default:
+                  throw new Error(`Unknown tool: ${name}`);
+              }
+
+              return {
+                statusCode: 200,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify(result),
+              };
+            }
+          } catch (error) {
+            return {
+              statusCode: 500,
+              headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ error: error.message }),
+            };
+          }
+        }
+        break;
+
       default:
         return {
           statusCode: 404,
