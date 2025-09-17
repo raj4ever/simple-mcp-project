@@ -90,15 +90,23 @@ async function createTables(db) {
 }
 
 const handler = async (event, context) => {
-  console.log('Function called with:', { path: event.path, method: event.httpMethod });
+  console.log('Function called with:', { 
+    path: event.path, 
+    method: event.httpMethod, 
+    headers: event.headers,
+    body: event.body ? event.body.substring(0, 200) + '...' : 'no body'
+  });
   
-  // Enable CORS
+  // Enable CORS with comprehensive headers for MCP client
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-API-Token',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-API-Token, X-Requested-With, Accept, Origin, Referer, User-Agent',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
     'Access-Control-Allow-Credentials': 'false',
-    'Cache-Control': 'no-cache',
+    'Access-Control-Max-Age': '86400',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
   };
 
   // Handle preflight requests
@@ -234,40 +242,36 @@ const handler = async (event, context) => {
 
       case 'mcp':
         if (method === 'GET') {
-          // SSE endpoint for MCP connections
-          const apiKey = event.headers['x-api-key'] || 
-                        event.headers['x-api-token'] || 
-                        event.headers['authorization'];
-          
-          let cleanApiKey = apiKey;
-          if (cleanApiKey && cleanApiKey.startsWith('Bearer ')) {
-            cleanApiKey = cleanApiKey.replace('Bearer ', '');
-          }
-          
-          const expectedApiKey = process.env.MCP_API_KEY || 'f2702684e533e55d2586cd002ab834f3b56679e244c64802dd73b321dfb7653b';
-          if (!cleanApiKey || cleanApiKey !== expectedApiKey) {
-            return {
-              statusCode: 401,
-              headers: { ...headers, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ error: 'Invalid API key for SSE endpoint' }),
-            };
-          }
-
-          // Return SSE headers for Server-Sent Events
+          // Handle SSE connection attempts - redirect to POST for MCP
           return {
             statusCode: 200,
-            headers: {
-              ...headers,
-              'Content-Type': 'text/event-stream',
-              'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive',
-              'X-Accel-Buffering': 'no', // Disable nginx buffering
-            },
-            body: 'data: {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}\n\n',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: 'MCP server ready. Use POST requests for MCP protocol communication.',
+              endpoint: '/api/mcp',
+              methods: ['initialize', 'tools/list', 'tools/call', 'notifications/initialized']
+            }),
           };
         } else if (method === 'POST') {
           // MCP Protocol endpoint for remote connections
-          const mcpRequest = body;
+          let mcpRequest = body;
+          
+          // Handle empty or malformed requests
+          if (!mcpRequest || typeof mcpRequest !== 'object') {
+            console.log('Invalid MCP request body:', event.body);
+            return {
+              statusCode: 400,
+              headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: null,
+                error: {
+                  code: -32700,
+                  message: "Parse error: Invalid JSON request"
+                }
+              }),
+            };
+          }
           
           // Validate API key - handle multiple header formats
           let apiKey = event.headers['x-api-key'] || 
@@ -291,7 +295,13 @@ const handler = async (event, context) => {
 
           // Handle MCP requests
           try {
-            console.log('MCP Request:', JSON.stringify(mcpRequest, null, 2));
+            console.log('MCP Request received:', {
+              method: mcpRequest?.method,
+              id: mcpRequest?.id,
+              hasParams: !!mcpRequest?.params,
+              bodyLength: event.body?.length || 0,
+              fullRequest: JSON.stringify(mcpRequest, null, 2)
+            });
             
             // Handle different MCP protocol methods
             if (mcpRequest.method === 'initialize') {
