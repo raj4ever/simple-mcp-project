@@ -95,8 +95,10 @@ const handler = async (event, context) => {
   // Enable CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-API-Token',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'false',
+    'Cache-Control': 'no-cache',
   };
 
   // Handle preflight requests
@@ -231,13 +233,55 @@ const handler = async (event, context) => {
         break;
 
       case 'mcp':
-        if (method === 'POST') {
+        if (method === 'GET') {
+          // SSE endpoint for MCP connections
+          const apiKey = event.headers['x-api-key'] || 
+                        event.headers['x-api-token'] || 
+                        event.headers['authorization'];
+          
+          let cleanApiKey = apiKey;
+          if (cleanApiKey && cleanApiKey.startsWith('Bearer ')) {
+            cleanApiKey = cleanApiKey.replace('Bearer ', '');
+          }
+          
+          const expectedApiKey = process.env.MCP_API_KEY || 'f2702684e533e55d2586cd002ab834f3b56679e244c64802dd73b321dfb7653b';
+          if (!cleanApiKey || cleanApiKey !== expectedApiKey) {
+            return {
+              statusCode: 401,
+              headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ error: 'Invalid API key for SSE endpoint' }),
+            };
+          }
+
+          // Return SSE headers for Server-Sent Events
+          return {
+            statusCode: 200,
+            headers: {
+              ...headers,
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              'Connection': 'keep-alive',
+              'X-Accel-Buffering': 'no', // Disable nginx buffering
+            },
+            body: 'data: {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}\n\n',
+          };
+        } else if (method === 'POST') {
           // MCP Protocol endpoint for remote connections
           const mcpRequest = body;
           
-          // Validate API key
-          const apiKey = event.headers['x-api-key'] || event.headers['authorization']?.replace('Bearer ', '');
-          if (!apiKey || apiKey !== process.env.MCP_API_KEY) {
+          // Validate API key - handle multiple header formats
+          let apiKey = event.headers['x-api-key'] || 
+                      event.headers['x-api-token'] || 
+                      event.headers['authorization'];
+          
+          // Clean up Bearer token format
+          if (apiKey && apiKey.startsWith('Bearer ')) {
+            apiKey = apiKey.replace('Bearer ', '');
+          }
+          
+          // Use the provided API key for validation
+          const expectedApiKey = process.env.MCP_API_KEY || 'f2702684e533e55d2586cd002ab834f3b56679e244c64802dd73b321dfb7653b';
+          if (!apiKey || apiKey !== expectedApiKey) {
             return {
               statusCode: 401,
               headers: { ...headers, 'Content-Type': 'application/json' },
