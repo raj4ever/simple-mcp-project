@@ -240,6 +240,41 @@ const handler = async (event, context) => {
         }
         break;
 
+      case 'mcp-connect':
+      case 'mcp/connect':
+        // Alternative endpoint for MCP client connections
+        if (method === 'GET' || method === 'POST') {
+          const apiKey = event.headers['x-api-key'] || 
+                        event.headers['x-api-token'] || 
+                        event.headers['authorization'];
+          
+          let cleanApiKey = apiKey;
+          if (cleanApiKey && cleanApiKey.startsWith('Bearer ')) {
+            cleanApiKey = cleanApiKey.replace('Bearer ', '');
+          }
+          
+          const expectedApiKey = process.env.MCP_API_KEY || 'f2702684e533e55d2586cd002ab834f3b56679e244c64802dd73b321dfb7653b';
+          if (!cleanApiKey || cleanApiKey !== expectedApiKey) {
+            return {
+              statusCode: 401,
+              headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ error: 'Unauthorized' }),
+            };
+          }
+
+          return {
+            statusCode: 200,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'ready',
+              endpoint: 'https://stunning-klepon-314d4d.netlify.app/api/mcp',
+              transport: 'http',
+              version: '1.0.0'
+            }),
+          };
+        }
+        break;
+
       case 'mcp':
         if (method === 'GET') {
           // Handle SSE connection attempts
