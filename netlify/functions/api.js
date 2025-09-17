@@ -291,12 +291,47 @@ const handler = async (event, context) => {
 
           // Handle MCP requests
           try {
-            if (mcpRequest.method === 'tools/list') {
+            console.log('MCP Request:', JSON.stringify(mcpRequest, null, 2));
+            
+            // Handle different MCP protocol methods
+            if (mcpRequest.method === 'initialize') {
               return {
                 statusCode: 200,
                 headers: { ...headers, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  tools: [
+                  jsonrpc: "2.0",
+                  id: mcpRequest.id,
+                  result: {
+                    protocolVersion: "2024-11-05",
+                    capabilities: {
+                      tools: {},
+                      resources: {}
+                    },
+                    serverInfo: {
+                      name: "remote-postgresql-mcp-server",
+                      version: "1.0.0"
+                    }
+                  }
+                }),
+              };
+            } else if (mcpRequest.method === 'notifications/initialized') {
+              return {
+                statusCode: 200,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: "2.0",
+                  id: mcpRequest.id || null
+                }),
+              };
+            } else if (mcpRequest.method === 'tools/list') {
+              return {
+                statusCode: 200,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: "2.0",
+                  id: mcpRequest.id,
+                  result: {
+                    tools: [
                     {
                       name: 'list_users',
                       description: 'Get all users from the database',
@@ -389,7 +424,8 @@ const handler = async (event, context) => {
                         required: ['id']
                       }
                     }
-                  ]
+                    ]
+                  }
                 }),
               };
             } else if (mcpRequest.method === 'tools/call') {
@@ -479,14 +515,39 @@ const handler = async (event, context) => {
               return {
                 statusCode: 200,
                 headers: { ...headers, 'Content-Type': 'application/json' },
-                body: JSON.stringify(result),
+                body: JSON.stringify({
+                  jsonrpc: "2.0",
+                  id: mcpRequest.id,
+                  result: result
+                }),
+              };
+            } else {
+              // Unknown MCP method
+              return {
+                statusCode: 405,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: "2.0",
+                  id: mcpRequest?.id || null,
+                  error: {
+                    code: -32601,
+                    message: `Method not found: ${mcpRequest?.method}`
+                  }
+                }),
               };
             }
           } catch (error) {
             return {
               statusCode: 500,
               headers: { ...headers, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ error: error.message }),
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: mcpRequest?.id || null,
+                error: {
+                  code: -32603,
+                  message: error.message
+                }
+              }),
             };
           }
         }
