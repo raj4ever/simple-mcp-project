@@ -242,15 +242,38 @@ const handler = async (event, context) => {
 
       case 'mcp':
         if (method === 'GET') {
-          // Handle SSE connection attempts - redirect to POST for MCP
+          // Handle SSE connection attempts
+          const apiKey = event.headers['x-api-key'] || 
+                        event.headers['x-api-token'] || 
+                        event.headers['authorization'];
+          
+          let cleanApiKey = apiKey;
+          if (cleanApiKey && cleanApiKey.startsWith('Bearer ')) {
+            cleanApiKey = cleanApiKey.replace('Bearer ', '');
+          }
+          
+          const expectedApiKey = process.env.MCP_API_KEY || 'f2702684e533e55d2586cd002ab834f3b56679e244c64802dd73b321dfb7653b';
+          if (!cleanApiKey || cleanApiKey !== expectedApiKey) {
+            return {
+              statusCode: 401,
+              headers: { ...headers, 'Content-Type': 'text/plain' },
+              body: 'Unauthorized',
+            };
+          }
+
+          // Return a proper SSE response that stays open
           return {
             statusCode: 200,
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: 'MCP server ready. Use POST requests for MCP protocol communication.',
-              endpoint: '/api/mcp',
-              methods: ['initialize', 'tools/list', 'tools/call', 'notifications/initialized']
-            }),
+            headers: {
+              ...headers,
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Connection': 'keep-alive',
+              'X-Accel-Buffering': 'no',
+              'Transfer-Encoding': 'chunked',
+            },
+            body: `retry: 10000\ndata: {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}\n\n`,
+            isBase64Encoded: false,
           };
         } else if (method === 'POST') {
           // MCP Protocol endpoint for remote connections
@@ -258,7 +281,24 @@ const handler = async (event, context) => {
           
           // Handle empty or malformed requests
           if (!mcpRequest || typeof mcpRequest !== 'object') {
-            console.log('Invalid MCP request body:', event.body);
+            console.log('Empty or invalid MCP request body:', event.body);
+            
+            // If it's an empty request, it might be a connection test
+            if (!event.body || event.body.trim() === '') {
+              return {
+                statusCode: 200,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: "2.0",
+                  result: {
+                    status: "ready",
+                    server: "remote-postgresql-mcp-server",
+                    version: "1.0.0"
+                  }
+                }),
+              };
+            }
+            
             return {
               statusCode: 400,
               headers: { ...headers, 'Content-Type': 'application/json' },
@@ -304,6 +344,27 @@ const handler = async (event, context) => {
             });
             
             // Handle different MCP protocol methods
+            // Special case for connection establishment
+            if (!mcpRequest.method && !mcpRequest.jsonrpc) {
+              console.log('Connection establishment request detected');
+              return {
+                statusCode: 200,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: "2.0",
+                  result: {
+                    status: "connected",
+                    server: "remote-postgresql-mcp-server",
+                    version: "1.0.0",
+                    capabilities: {
+                      tools: {},
+                      resources: {}
+                    }
+                  }
+                }),
+              };
+            }
+            
             if (mcpRequest.method === 'initialize') {
               return {
                 statusCode: 200,
